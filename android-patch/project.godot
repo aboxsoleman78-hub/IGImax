@@ -1,0 +1,28 @@
+config_version=5
+
+[application]
+config/name="IGImax"
+config/description="لعبة عمليات عسكرية ثلاثية الأبعاد للجوال - عشر مراحل"
+config/icon="res://assets/branding/igimax-icon.jpg"
+run/main_scene="res://Main.tscn"
+boot_splash/image="res://assets/branding/igimax-splash.jpg"
+boot_splash/bg_color=Color(0.015, 0.027, 0.055, 1)
+boot_splash/fullsize=true
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/handheld/orientation=0
+
+[input_devices]
+
+pointing/emulate_mouse_from_touch=false
+pointing/emulate_touch_from_mouse=true
+
+[rendering]
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+anti_aliasing/quality/msaa_3d=2
+anti_aliasing/quality/use_debanding=true
+lights_and_shadows/directional_shadow/size=2048
