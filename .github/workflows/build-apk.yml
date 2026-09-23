@@ -62,13 +62,13 @@ jobs:
 
           custom_template/debug=""
           custom_template/release=""
-          gradle_build/use_gradle_build=false
+          gradle_build/use_gradle_build=true
           gradle_build/gradle_build_directory=""
           gradle_build/android_source_template=""
           gradle_build/compress_native_libraries=false
           gradle_build/export_format=0
-          gradle_build/min_sdk=""
-          gradle_build/target_sdk=""
+          gradle_build/min_sdk="24"
+          gradle_build/target_sdk="33"
           architectures/armeabi-v7a=false
           architectures/arm64-v8a=true
           architectures/x86=false
@@ -108,7 +108,7 @@ jobs:
 
           TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/4.3.stable"
           mkdir -p "$TEMPLATE_DIR"
-          cp -a /root/.local/share/godot/export_templates/4.3.stable/. "$TEMPLATE_DIR/"
+          cp -a /root/.local/share/godot/export_templates/4.3.stable/. "$TEMPLATE_DIR/"\n\n          PROJECT="$GITHUB_WORKSPACE/extracted/IGImax_V127_Android_APK"\n          mkdir -p "$PROJECT/android/build"\n          unzip -q "$TEMPLATE_DIR/android_source.zip" -d "$PROJECT/android/build"\n          test -f "$PROJECT/android/build/build.gradle"
 
           JAVA_DIR="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
           mkdir -p "$HOME/.android" "$HOME/.config/godot"
