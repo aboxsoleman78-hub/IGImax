@@ -1,0 +1,53 @@
+name: Build IGImax Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "IGImax_V127_Android_Ready.zip"
+      - ".github/workflows/build-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.3
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract IGImax project
+        run: |
+          apt-get update
+          apt-get install -y unzip
+          rm -rf extracted
+          mkdir -p extracted
+          unzip -q IGImax_V127_Android_Ready.zip -d extracted
+          test -f extracted/IGImax_V127_Android_APK/project.godot
+
+      - name: Import Godot project
+        run: |
+          godot --headless --editor --path extracted/IGImax_V127_Android_APK --quit
+
+      - name: Build Android APK
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/build"
+          godot --headless \
+            --path extracted/IGImax_V127_Android_APK \
+            --export-debug "Android" \
+            "$GITHUB_WORKSPACE/build/IGImax-V127-debug.apk"
+
+      - name: Verify APK
+        run: test -s build/IGImax-V127-debug.apk
+
+      - name: Upload IGImax APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: IGImax-V127-Android
+          path: build/IGImax-V127-debug.apk
+          if-no-files-found: error
