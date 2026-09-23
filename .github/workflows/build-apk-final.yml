@@ -55,8 +55,6 @@ jobs:
           custom_template/release=""
           gradle_build/use_gradle_build=false
           gradle_build/export_format=0
-          gradle_build/min_sdk="23"
-          gradle_build/target_sdk="33"
           architectures/armeabi-v7a=false
           architectures/arm64-v8a=true
           architectures/x86=false
@@ -85,6 +83,8 @@ jobs:
 
       - name: Configure Android exporter
         run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
           TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/4.3.stable"
           mkdir -p "$TEMPLATE_DIR"
           cp -a /root/.local/share/godot/export_templates/4.3.stable/. "$TEMPLATE_DIR/"
