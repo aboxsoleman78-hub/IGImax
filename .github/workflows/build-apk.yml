@@ -29,7 +29,7 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
-      - name: Extract and configure IGImax project
+      - name: Extract IGImax project
         run: |
           apt-get update
           apt-get install -y unzip
@@ -38,20 +38,73 @@ jobs:
           unzip -q IGImax_V127_Android_Ready.zip -d extracted
           PROJECT="$GITHUB_WORKSPACE/extracted/IGImax_V127_Android_APK"
           test -f "$PROJECT/project.godot"
-          sed -i 's#gradle_build/use_gradle_build=false#gradle_build/use_gradle_build=true#' "$PROJECT/export_presets.cfg"
-          sed -i 's#gradle_build/min_sdk="23"#gradle_build/min_sdk="24"#' "$PROJECT/export_presets.cfg"
-          sed -i 's#gradle_build/target_sdk="34"#gradle_build/target_sdk="33"#' "$PROJECT/export_presets.cfg"
+
+          cat > "$PROJECT/export_presets.cfg" <<'EOF'
+          [preset.0]
+
+          name="Android"
+          platform="Android"
+          runnable=true
+          advanced_options=false
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path=""
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          encrypt_pck=false
+          encrypt_directory=false
+          script_export_mode=2
+
+          [preset.0.options]
+
+          custom_template/debug=""
+          custom_template/release=""
+          gradle_build/use_gradle_build=false
+          gradle_build/gradle_build_directory=""
+          gradle_build/android_source_template=""
+          gradle_build/compress_native_libraries=false
+          gradle_build/export_format=0
+          gradle_build/min_sdk=""
+          gradle_build/target_sdk=""
+          architectures/armeabi-v7a=false
+          architectures/arm64-v8a=true
+          architectures/x86=false
+          architectures/x86_64=false
+          version/code=127
+          version/name="1.27"
+          package/unique_name="com.abusuleiman.igimax"
+          package/name="IGImax"
+          package/signed=true
+          package/app_category=2
+          package/retain_data_on_uninstall=false
+          package/exclude_from_recents=false
+          package/show_in_android_tv=false
+          package/show_in_app_library=true
+          package/show_as_launcher_app=true
+          launcher_icons/main_192x192=""
+          launcher_icons/adaptive_foreground_432x432=""
+          launcher_icons/adaptive_background_432x432=""
+          launcher_icons/adaptive_monochrome_432x432=""
+          graphics/opengl_debug=false
+          screen/immersive_mode=true
+          screen/support_small=true
+          screen/support_normal=true
+          screen/support_large=true
+          screen/support_xlarge=true
+          user_data_backup/allow=false
+          command_line/extra_args=""
+          apk_expansion/enable=false
+          permissions/custom_permissions=PackedStringArray()
+          EOF
 
       - name: Configure Godot Android tools
         run: |
-          PROJECT="$GITHUB_WORKSPACE/extracted/IGImax_V127_Android_APK"
           TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/4.3.stable"
           mkdir -p "$TEMPLATE_DIR"
           cp -a /root/.local/share/godot/export_templates/4.3.stable/. "$TEMPLATE_DIR/"
-
-          mkdir -p "$PROJECT/android/build"
-          unzip -q "$TEMPLATE_DIR/android_source.zip" -d "$PROJECT/android/build"
-          test -f "$PROJECT/android/build/build.gradle"
 
           JAVA_DIR="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
           mkdir -p "$HOME/.android" "$HOME/.config/godot"
@@ -66,30 +119,31 @@ jobs:
           [resource]
           export/android/android_sdk_path = "/usr/lib/android-sdk"
           export/android/java_sdk_path = "$JAVA_DIR"
-          export/android/debug_keystore = "$HOME/.android/debug.keystore"
-          export/android/debug_keystore_user = "androiddebugkey"
-          export/android/debug_keystore_pass = "android"
-          EOF
-
-          cat >> "$PROJECT/export_presets.cfg" <<EOF
-          keystore/debug="$HOME/.android/debug.keystore"
-          keystore/debug_user="androiddebugkey"
-          keystore/debug_password="android"
           EOF
 
       - name: Import Godot project
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /github/home/.android/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: godot --headless --editor --path extracted/IGImax_V127_Android_APK --quit
 
       - name: Build Android APK
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /github/home/.android/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           mkdir -p "$GITHUB_WORKSPACE/build"
-          godot --headless \
+          godot --headless --verbose \
             --path extracted/IGImax_V127_Android_APK \
             --export-debug "Android" \
             "$GITHUB_WORKSPACE/build/IGImax-V127-debug.apk"
 
       - name: Verify APK
-        run: test -s build/IGImax-V127-debug.apk
+        run: |
+          test -s build/IGImax-V127-debug.apk
+          ls -lh build/IGImax-V127-debug.apk
 
       - name: Upload IGImax APK
         uses: actions/upload-artifact@v4
