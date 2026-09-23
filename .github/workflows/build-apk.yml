@@ -125,7 +125,7 @@ jobs:
           PROJECT="$GITHUB_WORKSPACE/extracted/IGImax_V127_Android_APK"
           rm -rf "$PROJECT/android"
           mkdir -p "$PROJECT/android/build"
-          python3 -m zipfile -e "$TEMPLATE_DIR/android_source.zip" "$PROJECT/android/build"
+          /usr/bin/unzip -q "$TEMPLATE_DIR/android_source.zip" -d "$PROJECT/android/build"
           test -f "$PROJECT/android/build/build.gradle"
 
           JAVA_DIR="/usr/lib/jvm/java-17-openjdk-amd64"
