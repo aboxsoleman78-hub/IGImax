@@ -29,6 +29,9 @@ jobs:
           mkdir -p extracted
           unzip -q IGImax_V127_Android_Ready.zip -d extracted
           test -f extracted/IGImax_V127_Android_APK/project.godot
+          sed -i 's#gradle_build/use_gradle_build=false#gradle_build/use_gradle_build=true#' extracted/IGImax_V127_Android_APK/export_presets.cfg
+          sed -i 's#gradle_build/min_sdk="23"#gradle_build/min_sdk="24"#' extracted/IGImax_V127_Android_APK/export_presets.cfg
+          sed -i 's#gradle_build/target_sdk="34"#gradle_build/target_sdk="33"#' extracted/IGImax_V127_Android_APK/export_presets.cfg
 
       - name: Configure Godot Android tools
         run: |
@@ -64,6 +67,7 @@ jobs:
       - name: Import Godot project
         run: |
           godot --headless --editor --path extracted/IGImax_V127_Android_APK --quit
+          godot --headless --path extracted/IGImax_V127_Android_APK --install-android-build-template
 
       - name: Build Android APK
         run: |
