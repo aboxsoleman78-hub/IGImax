@@ -29,16 +29,18 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
-      - name: Extract IGImax project
+      - name: Extract and configure IGImax project
         run: |
           apt-get update
           apt-get install -y unzip
           rm -rf extracted
           mkdir -p extracted
           unzip -q IGImax_V127_Android_Ready.zip -d extracted
-          test -f extracted/IGImax_V127_Android_APK/project.godot
-          sed -i 's#gradle_build/use_gradle_build=true#gradle_build/use_gradle_build=false#' extracted/IGImax_V127_Android_APK/export_presets.cfg
-          sed -i '/^gradle_build\/min_sdk=/d;/^gradle_build\/target_sdk=/d' extracted/IGImax_V127_Android_APK/export_presets.cfg
+          PROJECT="$GITHUB_WORKSPACE/extracted/IGImax_V127_Android_APK"
+          test -f "$PROJECT/project.godot"
+          sed -i 's#gradle_build/use_gradle_build=false#gradle_build/use_gradle_build=true#' "$PROJECT/export_presets.cfg"
+          sed -i 's#gradle_build/min_sdk="23"#gradle_build/min_sdk="24"#' "$PROJECT/export_presets.cfg"
+          sed -i 's#gradle_build/target_sdk="34"#gradle_build/target_sdk="33"#' "$PROJECT/export_presets.cfg"
 
       - name: Configure Godot Android tools
         run: |
@@ -46,6 +48,10 @@ jobs:
           TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/4.3.stable"
           mkdir -p "$TEMPLATE_DIR"
           cp -a /root/.local/share/godot/export_templates/4.3.stable/. "$TEMPLATE_DIR/"
+
+          mkdir -p "$PROJECT/android/build"
+          unzip -q "$TEMPLATE_DIR/android_source.zip" -d "$PROJECT/android/build"
+          test -f "$PROJECT/android/build/build.gradle"
 
           JAVA_DIR="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
           mkdir -p "$HOME/.android" "$HOME/.config/godot"
@@ -72,8 +78,7 @@ jobs:
           EOF
 
       - name: Import Godot project
-        run: |
-          godot --headless --editor --path extracted/IGImax_V127_Android_APK --quit
+        run: godot --headless --editor --path extracted/IGImax_V127_Android_APK --quit
 
       - name: Build Android APK
         run: |
