@@ -39,73 +39,11 @@ jobs:
           PROJECT="$GITHUB_WORKSPACE/extracted/IGImax_V127_Android_APK"
           test -f "$PROJECT/project.godot"
 
-          cat > "$PROJECT/export_presets.cfg" <<'EOF'
-          [preset.0]
-
-          name="Android"
-          platform="Android"
-          runnable=true
-          advanced_options=false
-          dedicated_server=false
-          custom_features=""
-          export_filter="all_resources"
-          include_filter=""
-          exclude_filter=""
-          export_path=""
-          encryption_include_filters=""
-          encryption_exclude_filters=""
-          encrypt_pck=false
-          encrypt_directory=false
-          script_export_mode=2
-
-          [preset.0.options]
-
-          custom_template/debug=""
-          custom_template/release=""
-          gradle_build/use_gradle_build=true
-          gradle_build/gradle_build_directory=""
-          gradle_build/android_source_template=""
-          gradle_build/compress_native_libraries=false
-          gradle_build/export_format=0
-          gradle_build/min_sdk="24"
-          gradle_build/target_sdk="34"
-          keystore/debug="/github/home/.android/debug.keystore"
-          keystore/debug_user="androiddebugkey"
-          keystore/debug_password="android"
-          keystore/release=""
-          keystore/release_user=""
-          keystore/release_password=""
-          one_click_deploy/clear_previous_install=false
-          architectures/armeabi-v7a=false
-          architectures/arm64-v8a=true
-          architectures/x86=false
-          architectures/x86_64=false
-          version/code=127
-          version/name="1.27"
-          package/unique_name="com.abusuleiman.igimax"
-          package/name="IGImax"
-          package/signed=true
-          package/app_category=2
-          package/retain_data_on_uninstall=false
-          package/exclude_from_recents=false
-          package/show_in_android_tv=false
-          package/show_in_app_library=true
-          package/show_as_launcher_app=true
-          launcher_icons/main_192x192=""
-          launcher_icons/adaptive_foreground_432x432=""
-          launcher_icons/adaptive_background_432x432=""
-          launcher_icons/adaptive_monochrome_432x432=""
-          graphics/opengl_debug=false
-          screen/immersive_mode=true
-          screen/support_small=true
-          screen/support_normal=true
-          screen/support_large=true
-          screen/support_xlarge=true
-          user_data_backup/allow=false
-          command_line/extra_args=""
-          apk_expansion/enable=false
-          permissions/custom_permissions=PackedStringArray()
-          EOF
+          # Keep the original Godot-generated Android preset.
+          # Non-Gradle export in Godot 4.3 requires SDK override fields to be empty.
+          sed -i 's#^gradle_build/use_gradle_build=.*#gradle_build/use_gradle_build=false#' "$PROJECT/export_presets.cfg"
+          sed -i 's#^gradle_build/min_sdk=.*#gradle_build/min_sdk=""#' "$PROJECT/export_presets.cfg"
+          sed -i 's#^gradle_build/target_sdk=.*#gradle_build/target_sdk=""#' "$PROJECT/export_presets.cfg"
 
       - name: Configure Godot Android tools
         run: |
@@ -121,12 +59,6 @@ jobs:
           TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/4.3.stable"
           mkdir -p "$TEMPLATE_DIR"
           cp -a /root/.local/share/godot/export_templates/4.3.stable/. "$TEMPLATE_DIR/"
-
-          PROJECT="$GITHUB_WORKSPACE/extracted/IGImax_V127_Android_APK"
-          rm -rf "$PROJECT/android"
-          mkdir -p "$PROJECT/android/build"
-          /usr/bin/unzip -q "$TEMPLATE_DIR/android_source.zip" -d "$PROJECT/android/build"
-          test -f "$PROJECT/android/build/build.gradle"
 
           JAVA_DIR="/usr/lib/jvm/java-17-openjdk-amd64"
           export JAVA_HOME="$JAVA_DIR"
