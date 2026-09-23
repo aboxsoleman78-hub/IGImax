@@ -21,6 +21,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: IGImax-V127-Source
+          path: IGImax_V127_Android_Ready.zip
+          compression-level: 0
+          if-no-files-found: error
+
       - name: Extract IGImax project
         run: |
           apt-get update
