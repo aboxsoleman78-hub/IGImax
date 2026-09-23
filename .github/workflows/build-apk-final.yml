@@ -53,8 +53,10 @@ jobs:
 
           custom_template/debug=""
           custom_template/release=""
-          gradle_build/use_gradle_build=false
+          gradle_build/use_gradle_build=true
           gradle_build/export_format=0
+          gradle_build/min_sdk="23"
+          gradle_build/target_sdk="34"
           architectures/armeabi-v7a=false
           architectures/arm64-v8a=true
           architectures/x86=false
@@ -106,7 +108,9 @@ jobs:
           EOF
 
       - name: Import project
-        run: godot --headless --editor --path final-project/IGImax_V127_Android_APK --quit
+        run: |
+          godot --headless --editor --path final-project/IGImax_V127_Android_APK --quit
+          godot --headless --path final-project/IGImax_V127_Android_APK --install-android-build-template
 
       - name: Export APK
         env:
