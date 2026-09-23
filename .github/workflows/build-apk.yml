@@ -44,6 +44,9 @@ jobs:
           sed -i 's#^gradle_build/use_gradle_build=.*#gradle_build/use_gradle_build=false#' "$PROJECT/export_presets.cfg"
           sed -i 's#^gradle_build/min_sdk=.*#gradle_build/min_sdk=""#' "$PROJECT/export_presets.cfg"
           sed -i 's#^gradle_build/target_sdk=.*#gradle_build/target_sdk=""#' "$PROJECT/export_presets.cfg"
+          if ! grep -q '^textures/vram_compression/import_etc2_astc=true' "$PROJECT/project.godot"; then
+            sed -i '/^\[rendering\]/a textures/vram_compression/import_etc2_astc=true' "$PROJECT/project.godot"
+          fi
 
       - name: Configure Godot Android tools
         run: |
