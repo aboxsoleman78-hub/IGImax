@@ -75,7 +75,7 @@ jobs:
       - name: Import Godot project
         run: |
           godot --headless --editor --path extracted/IGImax_V127_Android_APK --quit
-          godot --headless --path extracted/IGImax_V127_Android_APK --install-android-build-template
+          godot --headless --path extracted/IGImax_V127_Android_APK --install-android-build-template --quit
 
       - name: Build Android APK
         run: |
