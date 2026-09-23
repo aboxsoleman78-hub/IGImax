@@ -169,6 +169,19 @@ const REAL_ENEMY_WEAPONS := {
     "sniper": "res://weapons/real/Sniper Rifle.glb"
 }
 
+const STAGE_GROUND_TEXTURES := {
+    1: ["res://textures/grounds/asphalt_02_diff_2k.jpg", "res://textures/grounds/asphalt_02_rough_2k.jpg"],
+    2: ["res://textures/grounds/rocks_ground_02_col_2k.jpg", "res://textures/grounds/rocks_ground_02_rough_2k.jpg"],
+    3: ["res://textures/grounds/concrete_floor_01_diff_2k.jpg", "res://textures/grounds/concrete_floor_01_rough_2k.jpg"],
+    4: ["res://textures/grounds/clean_asphalt_diff_2k.jpg", ""],
+    5: ["res://textures/grounds/concrete_floor_01_diff_2k.jpg", "res://textures/grounds/concrete_floor_01_rough_2k.jpg"],
+    6: ["res://textures/grounds/gravel_road_diff_2k.jpg", ""],
+    7: ["res://textures/grounds/dry_ground_rocks_diff_2k.jpg", "res://textures/grounds/dry_ground_rocks_rough_2k.jpg"],
+    8: ["res://textures/grounds/asphalt_02_diff_2k.jpg", "res://textures/grounds/asphalt_02_rough_2k.jpg"],
+    9: ["res://textures/grounds/dry_ground_rocks_diff_2k.jpg", "res://textures/grounds/dry_ground_rocks_rough_2k.jpg"],
+    10: ["res://textures/grounds/asphalt_02_diff_2k.jpg", "res://textures/grounds/asphalt_02_rough_2k.jpg"]
+}
+
 var look_touch_id := -1
 var touch_action_ids := {}
 var yaw := 0.0
@@ -199,6 +212,23 @@ func _ready():
     _build_world()
     _build_ui()
 
+func _make_stage_ground_material(stage_number: int) -> StandardMaterial3D:
+    var material = StandardMaterial3D.new()
+    material.albedo_color = Color.WHITE
+    material.roughness = 0.92
+    material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+    material.uv1_scale = Vector3(36.0, 36.0, 36.0)
+    var texture_paths: Array = STAGE_GROUND_TEXTURES.get(stage_number, STAGE_GROUND_TEXTURES[1])
+    var color_texture = load(String(texture_paths[0]))
+    if color_texture != null:
+        material.albedo_texture = color_texture
+    var roughness_path := String(texture_paths[1])
+    if not roughness_path.is_empty():
+        var roughness_texture = load(roughness_path)
+        if roughness_texture != null:
+            material.roughness_texture = roughness_texture
+    return material
+
 func _build_world():
     var floor_body = StaticBody3D.new()
     floor_body.name = "Floor"
@@ -217,19 +247,7 @@ func _build_world():
     floor_box.size = Vector3(150, 1, 380)
     floor_mesh.mesh = floor_box
     floor_mesh.position = Vector3(0, -0.5, 30)
-    var ground_material = StandardMaterial3D.new()
-    ground_material.albedo_color = Color(0.31, 0.27, 0.20)
-    ground_material.roughness = 0.96
-    var ground_noise = FastNoiseLite.new()
-    ground_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-    ground_noise.frequency = 0.075
-    var ground_texture = NoiseTexture2D.new()
-    ground_texture.width = 256
-    ground_texture.height = 256
-    ground_texture.seamless = true
-    ground_texture.noise = ground_noise
-    ground_material.albedo_texture = load("res://textures/desert_ground.svg")
-    ground_material.uv1_scale = Vector3(28, 28, 28)
+    var ground_material = _make_stage_ground_material(mission_number)
     floor_mesh.material_override = ground_material
     floor_body.add_child(floor_mesh)
 

@@ -1,4 +1,4 @@
-name: Build IGImax V129 Android APK
+name: Build IGImax V130 Realistic Grounds APK
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract and apply V129 patch
+      - name: Extract and apply V130 patch
         run: |
           apt-get update
           apt-get install -y unzip openjdk-17-jdk-headless
@@ -31,14 +31,16 @@ jobs:
           cp android-patch/main.gd "$PROJECT/main.gd"
           cp android-patch/project.godot "$PROJECT/project.godot"
           cp android-patch/export_presets.cfg "$PROJECT/export_presets.cfg"
+          mkdir -p "$PROJECT/textures/grounds"
+          cp android-patch/textures/grounds/*.jpg "$PROJECT/textures/grounds/"
           mkdir -p "$PROJECT/assets/branding"
           cp android-patch/assets/igimax-icon.jpg "$PROJECT/assets/branding/igimax-icon.jpg"
           cp android-patch/assets/igimax-splash.jpg "$PROJECT/assets/branding/igimax-splash.jpg"
           sed -i 's#^gradle_build/use_gradle_build=.*#gradle_build/use_gradle_build=false#' "$PROJECT/export_presets.cfg"
           sed -i 's#^gradle_build/min_sdk=.*#gradle_build/min_sdk=""#' "$PROJECT/export_presets.cfg"
           sed -i 's#^gradle_build/target_sdk=.*#gradle_build/target_sdk=""#' "$PROJECT/export_presets.cfg"
-          sed -i 's#^version/code=.*#version/code=129#' "$PROJECT/export_presets.cfg"
-          sed -i 's#^version/name=.*#version/name="1.29"#' "$PROJECT/export_presets.cfg"
+          sed -i 's#^version/code=.*#version/code=130#' "$PROJECT/export_presets.cfg"
+          sed -i 's#^version/name=.*#version/name="1.30"#' "$PROJECT/export_presets.cfg"
           if ! grep -q '^textures/vram_compression/import_etc2_astc=true' "$PROJECT/project.godot"; then
             sed -i '/^\[rendering\]/a textures/vram_compression/import_etc2_astc=true' "$PROJECT/project.godot"
           fi
@@ -65,7 +67,7 @@ jobs:
           export/android/java_sdk_path = "$JAVA_DIR"
           EOF
 
-      - name: Import and build V129
+      - name: Import and build V130
         env:
           ANDROID_HOME: /opt/android-sdk
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
@@ -75,14 +77,14 @@ jobs:
         run: |
           godot --headless --editor --path extracted/IGImax_V127_Android_APK --quit
           mkdir -p "$GITHUB_WORKSPACE/build"
-          godot --headless --verbose --path extracted/IGImax_V127_Android_APK --export-debug "Android" "$GITHUB_WORKSPACE/build/IGImax-V129-Controls-Fix.apk"
+          godot --headless --verbose --path extracted/IGImax_V127_Android_APK --export-debug "Android" "$GITHUB_WORKSPACE/build/IGImax-V130-Realistic-Grounds.apk"
 
       - name: Verify APK
-        run: test -s build/IGImax-V129-Controls-Fix.apk
+        run: test -s build/IGImax-V130-Realistic-Grounds.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: IGImax-V129-Controls-Fix
-          path: build/IGImax-V129-Controls-Fix.apk
+          name: IGImax-V130-Realistic-Grounds
+          path: build/IGImax-V130-Realistic-Grounds.apk
           if-no-files-found: error
