@@ -113,7 +113,7 @@ jobs:
           rm -rf "$CLEAN_SDK"
           mkdir -p "$CLEAN_SDK"
           yes | sdkmanager --sdk_root="$CLEAN_SDK" --licenses >/dev/null || true
-          sdkmanager --sdk_root="$CLEAN_SDK" "platform-tools" "build-tools;34.0.0" "platforms;android-34"
+          sdkmanager --sdk_root="$CLEAN_SDK" "platform-tools" "build-tools;34.0.0" "platforms;android-34" "cmdline-tools;latest" "cmake;3.10.2.4988404" "ndk;23.2.8568313"
           test -x "$CLEAN_SDK/platform-tools/adb"
           test -x "$CLEAN_SDK/build-tools/34.0.0/aapt2"
           ls -la "$CLEAN_SDK/build-tools"
@@ -149,6 +149,8 @@ jobs:
 
       - name: Import Godot project
         env:
+          ANDROID_HOME: /opt/android-sdk
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /github/home/.android/debug.keystore
           GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
@@ -156,6 +158,8 @@ jobs:
 
       - name: Build Android APK
         env:
+          ANDROID_HOME: /opt/android-sdk
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /github/home/.android/debug.keystore
           GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
