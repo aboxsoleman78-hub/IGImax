@@ -62,6 +62,9 @@ var weapon_buttons := {}
 var weapon_icons := {}
 var zoom_button: Button
 var zoomed := false
+var last_zoom_toggle_msec := -1000
+var last_stance_toggle_msec := -1000
+var last_speed_toggle_msec := -1000
 var ammo_box_collected := false
 var health_box_collected := false
 var health_kits := 0
@@ -5161,15 +5164,21 @@ func _build_ui():
     right.button_up.connect(func(): move_right = false)
     right.gui_input.connect(func(event): _remember_move_touch(event, "right"))
 
-    var jump = _make_btn("🤸", Vector2.ZERO, Vector2(92, 92))
+    var jump = _make_btn("", Vector2.ZERO, Vector2(92, 92))
     ui_root.add_child(jump)
     # Jump, running and stance controls: lower-right under the mission row.
     jump.position = Vector2(screen_size.x - 140, screen_size.y - 245)
+    jump.icon = load("res://icons/jump.svg")
+    jump.expand_icon = true
+    jump.add_theme_constant_override("icon_max_width", 64)
     jump.button_down.connect(func(): jump_pressed = true)
 
-    stance_button = _make_btn("🧍", Vector2.ZERO, Vector2(96, 96))
+    stance_button = _make_btn("", Vector2.ZERO, Vector2(96, 96))
     ui_root.add_child(stance_button)
     stance_button.position = Vector2(screen_size.x - 262, screen_size.y - 135)
+    stance_button.icon = load("res://icons/stand.svg")
+    stance_button.expand_icon = true
+    stance_button.add_theme_constant_override("icon_max_width", 66)
     stance_button.button_down.connect(_cycle_stance)
 
     interact_button = _make_btn("✋", Vector2.ZERO, Vector2(92, 92))
@@ -5183,9 +5192,12 @@ func _build_ui():
     zoom_button.position = Vector2(screen_size.x - 315, screen_size.y - 540)
     zoom_button.button_down.connect(_toggle_zoom)
 
-    speed_button = _make_btn("🏃", Vector2.ZERO, Vector2(96, 88))
+    speed_button = _make_btn("", Vector2.ZERO, Vector2(96, 88))
     ui_root.add_child(speed_button)
     speed_button.position = Vector2(screen_size.x - 144, screen_size.y - 135)
+    speed_button.icon = load("res://icons/run.svg")
+    speed_button.expand_icon = true
+    speed_button.add_theme_constant_override("icon_max_width", 66)
     speed_button.button_down.connect(_cycle_movement_mode)
 
     shoot_button = _make_btn("", Vector2.ZERO, Vector2(126, 126))
@@ -5864,22 +5876,29 @@ func _update_health_color():
 func _cycle_stance():
     if not game_started or game_ended:
         return
+    var now_msec := Time.get_ticks_msec()
+    if now_msec - last_stance_toggle_msec < 180:
+        return
+    last_stance_toggle_msec = now_msec
     stance = (stance + 1) % 3
     var capsule = player_collision.shape as CapsuleShape3D
     if stance == 0:
-        stance_button.text = "🧍"
+        stance_button.text = ""
+        stance_button.icon = load("res://icons/stand.svg")
         camera.position.y = 0.65
         capsule.height = 1.8
         player_collision.position.y = 0.0
         quiet_mode = false
     elif stance == 1:
-        stance_button.text = "🧎"
+        stance_button.text = ""
+        stance_button.icon = load("res://icons/crouch.svg")
         camera.position.y = 0.20
         capsule.height = 1.25
         player_collision.position.y = -0.25
         quiet_mode = true
     else:
-        stance_button.text = "▬"
+        stance_button.text = ""
+        stance_button.icon = load("res://icons/prone.svg")
         camera.position.y = -0.18
         capsule.height = 0.90
         player_collision.position.y = -0.48
@@ -5888,6 +5907,13 @@ func _cycle_stance():
 func _toggle_zoom():
     if not game_started or game_ended:
         return
+    # Android may deliver the same tap through both ScreenTouch and the
+    # emulated Button signal. Ignore the duplicate so one finger always opens
+    # or closes the scope exactly once.
+    var now_msec := Time.get_ticks_msec()
+    if now_msec - last_zoom_toggle_msec < 180:
+        return
+    last_zoom_toggle_msec = now_msec
     zoomed = not zoomed
     var target_fov = 5.0 if zoomed and current_weapon == "sniper" else (20.0 if zoomed else 75.0)
     var zoom_tween = create_tween()
@@ -5899,15 +5925,22 @@ func _toggle_zoom():
 func _cycle_movement_mode():
     if not game_started or game_ended:
         return
+    var now_msec := Time.get_ticks_msec()
+    if now_msec - last_speed_toggle_msec < 180:
+        return
+    last_speed_toggle_msec = now_msec
     movement_mode = (movement_mode + 1) % 3
     if movement_mode == 0:
-        speed_button.text = "🚶"
+        speed_button.text = ""
+        speed_button.icon = load("res://icons/walk.svg")
         status_label.text = "وضع المشي الهادئ"
     elif movement_mode == 1:
-        speed_button.text = "🏃"
+        speed_button.text = ""
+        speed_button.icon = load("res://icons/run.svg")
         status_label.text = "وضع الجري"
     else:
-        speed_button.text = "⚡"
+        speed_button.text = ""
+        speed_button.icon = load("res://icons/sprint.svg")
         status_label.text = "الجري السريع - يصدر ضجيجاً أكبر"
 
 func _make_btn(txt: String, pos: Vector2, sz: Vector2) -> Button:
