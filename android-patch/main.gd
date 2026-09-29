@@ -12,7 +12,21 @@ var tower_ladders := []
 var active_ladder = null
 var jump_pressed := false
 var shoot_pressed := false
-var ammo := 12
+var ammo := 36
+var weapon_ammo := {
+    "pistol": 45,
+    "rifle": 90,
+    "sniper": 36,
+    "shotgun": 24,
+    "grenade": 6
+}
+const WEAPON_PICKUP_AMMO := {
+    "pistol": 15,
+    "rifle": 30,
+    "sniper": 12,
+    "shotgun": 8,
+    "grenade": 2
+}
 var ammo_label: Label
 var status_label: Label
 var health_bar: ProgressBar
@@ -957,7 +971,9 @@ func _build_compound():
     _make_building(Vector3(0, 1.45, -20), Vector3(8, 2.9, 7), Color(0.42, 0.47, 0.58))
     _make_starting_cover()
     _make_outside_nature()
-    for tower_pos in [Vector3(-60, 0, -55), Vector3(0, 0, -62), Vector3(60, 0, -55), Vector3(-60, 0, 52), Vector3(60, 0, 52), Vector3(-12, 0, 64), Vector3(12, 0, 64), Vector3(-19, 0, 86)]:
+    # Two high sniper towers at the front corners of the camp. Each tower is
+    # reached only by its ladder; there are no bridge connections.
+    for tower_pos in [Vector3(-58, 0, 56), Vector3(58, 0, 56)]:
         _make_guard_tower(tower_pos)
     _make_vehicle(Vector3(-15, 0.90, 35), Color(0.18, 0.24, 0.16), true)
     _make_vehicle(Vector3(20, 0.75, 42), Color(0.25, 0.22, 0.15), false)
@@ -1410,7 +1426,7 @@ func _spawn_scenario_enemies():
     var second_guard = _make_enemy(Vector3(2.4, 1.0, 76.0), "rifle")
     gate_guard.look_at(Vector3(-2.4, gate_guard.global_position.y, 104), Vector3.UP)
     second_guard.look_at(Vector3(2.4, second_guard.global_position.y, 104), Vector3.UP)
-    for sniper_pos in [Vector3(-60, 10.12, -55), Vector3(0, 10.12, -62), Vector3(60, 10.12, -55), Vector3(-60, 10.12, 52), Vector3(60, 10.12, 52), Vector3(-12, 10.12, 64), Vector3(12, 10.12, 64), Vector3(-19, 10.12, 86)]:
+    for sniper_pos in [Vector3(-58, 10.12, 56), Vector3(58, 10.12, 56)]:
         var tower_sniper = _make_enemy(sniper_pos, "sniper")
         tower_sniper.set_meta("tower_sniper", true)
     var inside_positions = [Vector3(-35, 1.0, 30), Vector3(33, 1.0, 18), Vector3(-18, 1.0, 0), Vector3(12, 1.0, -20), Vector3(-40, 1.0, -35), Vector3(35, 1.0, -48), Vector3(0, 1.0, 8), Vector3(-48, 1.0, -22), Vector3(47, 1.0, -18), Vector3(-20, 1.0, 48), Vector3(22, 1.0, 38)]
@@ -3247,20 +3263,27 @@ func _find_door_by_kind(kind: String):
 func _get_aim_assist_target():
     if not is_instance_valid(camera):
         return null
-    var screen_center = get_viewport().get_visible_rect().size * 0.5
-    # Aim assistance is deliberately activated only when the centre of the +
-    # actually touches an enemy collider. Nearby silhouettes are never pulled.
-    var origin = camera.project_ray_origin(screen_center)
-    var destination = origin + camera.project_ray_normal(screen_center) * weapon_range
-    var query = PhysicsRayQueryParameters3D.create(origin, destination)
-    query.exclude = [player]
-    var hit = get_world_3d().direct_space_state.intersect_ray(query)
-    if hit.is_empty():
-        return null
-    var collider = hit.get("collider")
-    if collider != null and collider.has_meta("enemy"):
-        return collider
-    return null
+    var center = get_viewport().get_visible_rect().size * 0.5
+    var best_enemy = null
+    var best_distance = AIM_ASSIST_RADIUS
+    for enemy in enemies:
+        if not is_instance_valid(enemy):
+            continue
+        var aim_point = enemy.global_position + Vector3(0, 0.45, 0)
+        if camera.is_position_behind(aim_point):
+            continue
+        var screen_point = camera.unproject_position(aim_point)
+        var screen_distance = screen_point.distance_to(center)
+        if screen_distance >= best_distance:
+            continue
+        var origin = camera.global_position
+        var query = PhysicsRayQueryParameters3D.create(origin, aim_point)
+        query.exclude = [player]
+        var hit = get_world_3d().direct_space_state.intersect_ray(query)
+        if not hit.is_empty() and hit.get("collider") == enemy:
+            best_enemy = enemy
+            best_distance = screen_distance
+    return best_enemy
 
 func _update_doors(delta):
     for door in doors:
@@ -3838,6 +3861,7 @@ func _shoot():
         _reload_weapon()
         return
     ammo -= 1
+    weapon_ammo[current_weapon] = ammo
     player_has_fired = true
     _update_ammo_text()
     player_noise = 34.0 if current_weapon == "grenade" else (30.0 if current_weapon == "shotgun" else (24.0 if current_weapon == "rifle" else (12.0 if current_weapon == "pistol" else 45.0)))
@@ -4137,11 +4161,13 @@ func _interact():
         if collected_kind in ["pistol", "sniper", "rifle", "shotgun", "grenade"]:
             _store_captured_weapon(collected_kind)
         elif collected_kind == "ammo":
-            var maximum_ammo = 12 if current_weapon == "sniper" else (8 if current_weapon == "shotgun" else (15 if current_weapon == "pistol" else (3 if current_weapon == "grenade" else 30)))
-            ammo = min(ammo + 15, maximum_ammo)
+            var added_rounds = int(WEAPON_PICKUP_AMMO.get(current_weapon, 15))
+            weapon_ammo[current_weapon] = int(weapon_ammo.get(current_weapon, 0)) + added_rounds
+            ammo = int(weapon_ammo[current_weapon])
             ammo_box_collected = true
-            status_label.text = "تم التقاط صندوق الذخيرة"
+            status_label.text = "تم التقاط صندوق ذخيرة: +%d" % added_rounds
             _update_ammo_text()
+            _refresh_weapon_bar()
         elif collected_kind == "health":
             health_kits += 1
             health_box_collected = true
@@ -4630,6 +4656,7 @@ func _update_interact_button():
         return
     var needed = false
     interact_button.text = "✋"
+    interact_button.flat = false
     if _get_nearby_ladder() != null:
         needed = true
         interact_button.text = "🪜"
@@ -4653,6 +4680,9 @@ func _update_interact_button():
             var objective_kind = String(objective.get_meta("objective_kind", ""))
             if (objective_kind.ends_with("_key") or objective_kind in ["access_card", "computer", "alarm_panel", "explosives", "documents", "data_terminal", "extraction", "security_console", "port_explosives", "shipping_manifest", "port_terminal", "secret_briefcase", "boat_extraction", "airbase_security", "airbase_explosives", "airbase_terminal", "airbase_charge_target", "airbase_extraction", "facility_power", "facility_code", "facility_terminal", "facility_explosives", "facility_charge_target", "facility_extraction", "train_power", "train_explosives", "train_prisoner", "train_charge_target", "train_extraction", "canyon_relay", "canyon_intel", "canyon_extraction", "bridge_weapons", "bridge_controls", "bridge_explosives", "bridge_charge", "bridge_extraction", "convoy_checkpoint", "convoy_intel", "convoy_documents", "convoy_extraction", "final_generator", "final_allies", "final_radio", "final_data", "final_charge", "final_extraction"]) and player.global_position.distance_to(objective.global_position) < 3.1:
                 needed = true
+                if objective_kind == "train_prisoner":
+                    interact_button.text = "إنقاذ"
+                    interact_button.flat = true
                 break
     interact_button.visible = needed and game_started and not game_ended
 
@@ -4685,14 +4715,7 @@ func _get_nearby_ladder():
             continue
         if player.global_position.y > 2.0 and player.global_position.y < 8.7:
             continue
-        var sniper_alive = false
-        for enemy in enemies:
-            if is_instance_valid(enemy) and bool(enemy.get_meta("tower_sniper", false)):
-                if Vector2(enemy.global_position.x, enemy.global_position.z).distance_to(Vector2(ladder_pos.x, ladder_pos.z)) < 4.0:
-                    sniper_alive = true
-                    break
-        if not sniper_alive:
-            return ladder_pos
+        return ladder_pos
     return null
 
 func _has_key_for_door(lock_kind: String) -> bool:
@@ -4846,9 +4869,16 @@ func _apply_brightness_setting():
         elif child is WorldEnvironment and child.environment != null:
             child.environment.ambient_light_energy = ambient_base * factor
 
+func _weapon_default_ammo(kind: String) -> int:
+    return int({"pistol": 45, "rifle": 90, "sniper": 36, "shotgun": 24, "grenade": 6}.get(kind, 30))
+
 func _equip_weapon(kind: String, captured := false):
+    if weapon_ammo.has(current_weapon):
+        weapon_ammo[current_weapon] = ammo
     if not owned_weapons.has(kind):
         owned_weapons.append(kind)
+    if not weapon_ammo.has(kind):
+        weapon_ammo[kind] = _weapon_default_ammo(kind)
     if captured:
         enemy_weapon_captured = true
         _save_progress()
@@ -4857,33 +4887,29 @@ func _equip_weapon(kind: String, captured := false):
     if kind == "sniper":
         weapon_damage = 3
         weapon_range = 260.0
-        ammo = 12
         weapon_root.scale = Vector3(0.34, 0.34, 0.36)
         status_label.text = "استبدلت السلاح بالقناصة بعيدة المدى"
     elif kind == "shotgun":
         weapon_damage = 2
         weapon_range = 55.0
-        ammo = 8
         weapon_root.scale = Vector3(0.28, 0.28, 0.31)
         status_label.text = "استبدلت السلاح ببندقية الخرطوش"
     elif kind == "pistol":
         weapon_damage = 1
         weapon_range = 70.0
-        ammo = 15
         weapon_root.scale = Vector3(0.30, 0.30, 0.32)
         status_label.text = "استبدلت السلاح بالمسدس"
     elif kind == "grenade":
         weapon_damage = 4
         weapon_range = 32.0
-        ammo = 3
         weapon_root.scale = Vector3(0.25, 0.25, 0.25)
         status_label.text = "تم تجهيز القنبلة"
     else:
         weapon_damage = 1
         weapon_range = 100.0
-        ammo = 30
         weapon_root.scale = Vector3(0.30, 0.30, 0.30)
         status_label.text = "استبدلت السلاح ببندقية الجندي"
+    ammo = int(weapon_ammo.get(kind, _weapon_default_ammo(kind)))
     _update_ammo_text()
     _refresh_weapon_bar()
     _update_objective_text()
@@ -4896,9 +4922,16 @@ func _select_owned_weapon(kind: String):
 func _store_captured_weapon(kind: String):
     if not owned_weapons.has(kind):
         owned_weapons.append(kind)
+        if not weapon_ammo.has(kind):
+            weapon_ammo[kind] = _weapon_default_ammo(kind)
         status_label.text = "تمت إضافة السلاح إلى خانة الأسلحة"
     else:
-        status_label.text = "السلاح موجود في خانة الأسلحة"
+        var bonus = int(WEAPON_PICKUP_AMMO.get(kind, 15))
+        weapon_ammo[kind] = int(weapon_ammo.get(kind, 0)) + bonus
+        if current_weapon == kind:
+            ammo = int(weapon_ammo[kind])
+            _update_ammo_text()
+        status_label.text = "سلاح مكرر: تمت إضافة %d طلقة" % bonus
     enemy_weapon_captured = true
     _save_progress()
     _refresh_weapon_bar()
@@ -4928,6 +4961,9 @@ func _refresh_weapon_bar():
         button.z_index = 140
         button.text = ""
         button.icon = weapon_icons.get(kind, null)
+        var count_label = button.get_meta("ammo_count_label", null)
+        if count_label != null and is_instance_valid(count_label):
+            count_label.text = str(int(weapon_ammo.get(kind, 0)))
         button.modulate = Color(1.0, 0.82, 0.18, 1.0) if current_weapon == kind else Color(1.0, 1.0, 1.0, 0.82)
     _layout_top_inventory()
 
@@ -5088,17 +5124,8 @@ func _update_objective_text():
 func _reload_weapon():
     if is_reloading or game_ended:
         return
-    is_reloading = true
-    status_label.text = "جارٍ إعادة التلقيم..."
-    shoot_button.text = ""
-    await get_tree().create_timer(1.25).timeout
-    if game_ended:
-        return
-    ammo = 12 if current_weapon == "sniper" else (8 if current_weapon == "shotgun" else (15 if current_weapon == "pistol" else (3 if current_weapon == "grenade" else 30)))
-    _update_ammo_text()
-    status_label.text = "تمت إعادة التلقيم"
-    shoot_button.text = ""
-    is_reloading = false
+    status_label.text = "نفدت ذخيرة هذا السلاح - التقط سلاحاً مماثلاً أو صندوق ذخيرة"
+    _refresh_weapon_bar()
 
 func _play_shot_effects():
     muzzle_flash.visible = true
@@ -5223,17 +5250,26 @@ func _build_ui():
         "shotgun": load("res://icons/shotgun.svg"),
         "grenade": load("res://icons/grenade.svg")
     }
-    var pistol_select = _make_btn("", Vector2.ZERO, Vector2(78, 48))
-    var rifle_select = _make_btn("", Vector2.ZERO, Vector2(78, 48))
-    var sniper_select = _make_btn("", Vector2.ZERO, Vector2(78, 48))
-    var shotgun_select = _make_btn("", Vector2.ZERO, Vector2(78, 48))
-    var grenade_select = _make_btn("", Vector2.ZERO, Vector2(78, 48))
+    var pistol_select = _make_btn("", Vector2.ZERO, Vector2(78, 64))
+    var rifle_select = _make_btn("", Vector2.ZERO, Vector2(78, 64))
+    var sniper_select = _make_btn("", Vector2.ZERO, Vector2(78, 64))
+    var shotgun_select = _make_btn("", Vector2.ZERO, Vector2(78, 64))
+    var grenade_select = _make_btn("", Vector2.ZERO, Vector2(78, 64))
     for weapon_button in [pistol_select, rifle_select, sniper_select, shotgun_select, grenade_select]:
         weapon_button.expand_icon = true
-        weapon_button.add_theme_constant_override("icon_max_width", 64)
+        weapon_button.add_theme_constant_override("icon_max_width", 42)
         weapon_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
         weapon_button.z_index = 140
         ui_root.add_child(weapon_button)
+        var count_label = Label.new()
+        count_label.position = Vector2(0, 43)
+        count_label.size = Vector2(78, 18)
+        count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        count_label.add_theme_font_size_override("font_size", 15)
+        count_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.98))
+        weapon_button.add_child(count_label)
+        weapon_button.set_meta("ammo_count_label", count_label)
     # Responsive row keeps every weapon and the medical bag visible on phones.
     var weapon_row_x = max(screen_size.x * 0.5 - 252.0, 145.0)
     pistol_select.position = Vector2(weapon_row_x, 7)
@@ -5989,12 +6025,18 @@ func _on_look_gui_input(event):
 
 func _apply_look_drag(relative: Vector2):
     var sensitivity = AIM_LOOK_SENS if zoomed else LOOK_SENS
-    if _get_aim_assist_target() != null:
-        # Slow the final few pixels over a visible enemy without stealing
-        # control from the player or snapping through walls.
-        sensitivity *= 0.58
-    yaw -= relative.x * sensitivity
-    pitch -= relative.y * sensitivity
+    var adjusted_relative = relative
+    var assist_target = _get_aim_assist_target()
+    if assist_target != null:
+        # A small screen-space pull helps a thumb stay on target without
+        # snapping the reticle or taking aiming control away from the player.
+        var center = get_viewport().get_visible_rect().size * 0.5
+        var target_screen = camera.unproject_position(assist_target.global_position + Vector3(0, 0.45, 0))
+        var target_error = target_screen - center
+        adjusted_relative += target_error * 0.018
+        sensitivity *= 0.82
+    yaw -= adjusted_relative.x * sensitivity
+    pitch -= adjusted_relative.y * sensitivity
     pitch = clamp(pitch, deg_to_rad(-75), deg_to_rad(75))
     player.rotation.y = yaw
     camera.rotation.x = pitch
